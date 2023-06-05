@@ -38,50 +38,79 @@ void write1(EmbeddedController f, unsigned char offset, unsigned char bit, const
     {
         c &= ~(1 << bit);
     }
-    f.writeByte(offset,c);
+    f.writeByte(offset, c);
 }
 
-int main()
+int main(int argc, char *args[])
 {
     EmbeddedController ec = EmbeddedController();
 
     // Making sure driver file loaded successfully
     if (ec.driverFileExist && ec.driverLoaded)
     {
-        //  commented-out values are from an older Gigabyte model; not all of these seem to be valid for the Aero 15
-        //    printf("  USB Charge During Sleep              [0x01.5]: %d\n", read1(ec, 0x01, 5));
-        //    printf("  USB Charge During Hibernate          [0x07.2]: %d\n", read1(ec, 0x07, 2));
-        //    printf("  Camera Enabled                         [0x01.6]: %d\n", read1(ec, 0x01, 6));
-        //    printf("  Bluetooth Enabled                      [0x01.7]: %d\n", read1(ec, 0x01, 7));
-        //    printf("  WiFi Enabled                           [0x02.6]: %d\n", read1(ec, 0x02, 6));
-        //    printf("  Touchpad Enabled                       [0x03.5]: %d\n", read1(ec, 0x03, 5));
-        //    printf("  Ambient Light                        [0x66]:   %d%%\n", read8(ec, 0x66));
-        //    printf("  Screen Disabled                        [0x09.3]: %d\n", read1(ec, 0x09, 3));
-        //    printf("  Keyboard Backlight Mode                [0xD7]:   %d\n", read8(ec, 0xD7));
-        printf("  CPU Temp                               [0x60]:   %d C\n", read8(ec, 0x60));
-        printf("  GPU Temp                               [0x61]:   %d C\n", read8(ec, 0x61));
-        printf("  MLB Temp                               [0x62]:   %d C\n", read8(ec, 0x62));
-        printf("  Fan0 Speed                             [0xFC]:   %d RPM\n", read16(ec, 0xFC));
-        printf("  Fan1 Speed                             [0xFE]:   %d RPM\n", read16(ec, 0xFE));
-        printf("  Fan Control Enabled                    [0x13.3]: %d\n", read1(ec, 0x13, 3));
-        printf("  Fan Quiet Mode Enabled                 [0x08.6]: %d\n", read1(ec, 0x08, 6));
-        printf("  Fan Gaming Mode Enabled                [0x0C.4]: %d\n", read1(ec, 0x0C, 4));
-        printf("  Fan Custom Mode Enabled                [0x0D.7]: %d\n", read1(ec, 0x0D, 7));
-        printf("  Fan Custom Mode - Fixed Speed          [0x06.4]: %d\n", read1(ec, 0x06, 4)); // untested
-        printf("  Fan0 Custom Speed Setting              [0xB0]:   %d%%\n", (int)round(read8(ec, 0xB0) / 2.55));
-        printf("  Fan1 Custom Speed Setting              [0xB1]:   %d%%\n", (int)round(read8(ec, 0xB1) / 2.55));
-        //    printf("  Current Speed Setting                [0x64]:   %d\n", read8(ec, 0x64));
+        if (argc == 3)
+        {
+            char *dotIdx = strchr(args[1], '.');
+            if (dotIdx != NULL)
+            {
+                *dotIdx = '\0';
+                dotIdx++;
+                unsigned char offset = (unsigned char)strtol(args[1], NULL, 0);
+                unsigned char bit = (unsigned char)atoi(dotIdx);
+                unsigned char value = (unsigned char)strtol(args[2], NULL, 0);
+                write1(ec, offset, bit, value);
+            }
+            else
+            {
+                unsigned char offset = (unsigned char)strtol(args[1], NULL, 0);
+                unsigned char value = (unsigned char)strtol(args[2], NULL, 0);
+                write8(ec, offset, value);
+            }
+        }
+        else
+        {
+            // Setting the following bits causing the EC to activate (or at least activate fan controls)
+            write8(ec, 0x01, 0xA3);
 
-        // register 0f: 01110000 on standard, 01110100 on custom
-        printf("  Special Charge Modes (express/custom)  [0x0F.2]: %d\n", read1(ec, 0x0F, 2));
-        printf("  Custom Charge Mode                     [0xC6.0]: %d\n", read1(ec, 0xC6, 0));
-        printf("  Max. Charge Percentage                 [0xA9]:   %d%%\n", read8(ec, 0xA9));
+            printf("Usage: sudo %s [<hex-offset[.bit]> <hex-value>]\n", args[0]);
+            printf("   Ex: sudo %s 0x01.6 0x07\n\n", args[0]);
+            printf("Current Embedded Controller Values:\n");
+            //  commented-out values are from an older Gigabyte model; not all of these seem to be valid for the Aero 15
+            //    printf("  USB Charge During Sleep              [0x01.5]: %d\n", read1(ec, 0x01, 5));
+            //    printf("  USB Charge During Hibernate          [0x07.2]: %d\n", read1(ec, 0x07, 2));
+            //    printf("  Camera Enabled                         [0x01.6]: %d\n", read1(ec, 0x01, 6));
+            //    printf("  Bluetooth Enabled                      [0x01.7]: %d\n", read1(ec, 0x01, 7));
+            //    printf("  WiFi Enabled                           [0x02.6]: %d\n", read1(ec, 0x02, 6));
+            //    printf("  Touchpad Enabled                       [0x03.5]: %d\n", read1(ec, 0x03, 5));
+            //    printf("  Ambient Light                        [0x66]:   %d%%\n", read8(ec, 0x66));
+            //    printf("  Screen Disabled                        [0x09.3]: %d\n", read1(ec, 0x09, 3));
+            //    printf("  Keyboard Backlight Mode                [0xD7]:   %d\n", read8(ec, 0xD7));
+            printf("  CPU Temp                               [0x60]:   %d C\n", read8(ec, 0x60));
+            printf("  GPU Temp                               [0x61]:   %d C\n", read8(ec, 0x61));
+            printf("  MLB Temp                               [0x62]:   %d C\n", read8(ec, 0x62));
+            printf("  Fan0 Speed                             [0xFC]:   %d RPM\n", read16(ec, 0xFC));
+            printf("  Fan1 Speed                             [0xFE]:   %d RPM\n", read16(ec, 0xFE));
+            printf("  Fan Control Enabled                    [0x13.3]: %d\n", read1(ec, 0x13, 3));
+            printf("  Fan Quiet Mode Enabled                 [0x08.6]: %d\n", read1(ec, 0x08, 6));
+            printf("  Fan Gaming Mode Enabled                [0x0C.4]: %d\n", read1(ec, 0x0C, 4));
+            printf("  Fan Custom Mode Enabled                [0x0D.7]: %d\n", read1(ec, 0x0D, 7));
+            printf("  Fan Custom Mode - Fixed Speed          [0x06.4]: %d\n", read1(ec, 0x06, 4)); // untested
+            printf("  Fan0 Custom Speed Setting              [0xB0]:   %d%%\n", (int)round(read8(ec, 0xB0) / 2.55));
+            printf("  Fan1 Custom Speed Setting              [0xB1]:   %d%%\n", (int)round(read8(ec, 0xB1) / 2.55));
+            //    printf("  Current Speed Setting                [0x64]:   %d\n", read8(ec, 0x64));
 
-        auto value = ec.readByte(0x01);
-        // Free up the resources at the end
-        ec.writeByte(0x01, 0xe3);
-        ec.close();
-    } else{
+            // register 0f: 01110000 on standard, 01110100 on custom
+            printf("  Special Charge Modes (express/custom)  [0x0F.2]: %d\n", read1(ec, 0x0F, 2));
+            printf("  Custom Charge Mode                     [0xC6.0]: %d\n", read1(ec, 0xC6, 0));
+            printf("  Max. Charge Percentage                 [0xA9]:   %d%%\n", read8(ec, 0xA9));
+
+            auto value = ec.readByte(0x01);
+            // Free up the resources at the end
+            ec.close();
+        }
+    }
+    else
+    {
         printf("  Driver not loaded\n");
     }
 }
